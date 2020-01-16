@@ -39,7 +39,7 @@ public class CommandHelloWorld extends HystrixCommand<String> {
         super(HystrixCommandGroupKey.Factory.asKey("ExampleGroup"));
         this.name = name;
     }
-
+    
     @Override
     protected String run() {
         return "Hello " + name + "!";

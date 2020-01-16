@@ -12,9 +12,11 @@ public class HystrixCachedObservable<R> {
 
     protected HystrixCachedObservable(final Observable<R> originalObservable) {
         ReplaySubject<R> replaySubject = ReplaySubject.create();
+        // 入参originalObservable是原始Observable,这里调用了subscribe就会触发发射数据，保存到ReplaySubject中
+        // subscribe(replaySubject)时 replaySubject是一个 Observer
         this.originalSubscription = originalObservable
                 .subscribe(replaySubject);
-
+        // replaySubject 包装后赋值给 cachedObservable，摇身一变成了 Observable
         this.cachedObservable = replaySubject
                 .doOnUnsubscribe(new Action0() {
                     @Override

@@ -411,6 +411,7 @@ import java.util.concurrent.atomic.AtomicReference;
             }
         };
 
+        // _cmd是用户的command实现类，applyHystrixSemantics的call方法返回了包装的 Observable 被观察者对象
         final Func0<Observable<R>> applyHystrixSemantics = new Func0<Observable<R>>() {
             @Override
             public Observable<R> call() {
@@ -471,18 +472,23 @@ import java.util.concurrent.atomic.AtomicReference;
                     }
                 }
 
+                //缓存开关
                 final boolean requestCacheEnabled = isRequestCachingEnabled();
+                //子类重写的方法 返回cacheKey
                 final String cacheKey = getCacheKey();
 
                 /* try from cache first */
                 if (requestCacheEnabled) {
+                    //先从缓存中取
                     HystrixCommandResponseFromCache<R> fromCache = (HystrixCommandResponseFromCache<R>) requestCache.get(cacheKey);
                     if (fromCache != null) {
+                        // 标记 从缓存中结果
                         isResponseFromCache = true;
+                        //缓存命中，返回缓存的 Observable对象，该对象已经发射过了
                         return handleRequestCacheHitAndEmitValues(fromCache, _cmd);
                     }
                 }
-
+                //获得 执行命令Observable,会调用到用户实现的HystrixCommand run方法
                 Observable<R> hystrixObservable =
                         Observable.defer(applyHystrixSemantics)
                                 .map(wrapWithAllOnNextHooks);
@@ -490,11 +496,14 @@ import java.util.concurrent.atomic.AtomicReference;
                 Observable<R> afterCache;
 
                 // put in cache
+                // 判断只有缓存开启并且cacheKey不为null的情况下才会真正使用缓存
                 if (requestCacheEnabled && cacheKey != null) {
-                    // wrap it for caching
+                    // wrap it for caching 包装起来进行缓存
                     HystrixCachedObservable<R> toCache = HystrixCachedObservable.from(hystrixObservable, _cmd);
+                    // 使用putIfAbsent，不存在时返回null，存在返回对象
                     HystrixCommandResponseFromCache<R> fromCache = (HystrixCommandResponseFromCache<R>) requestCache.putIfAbsent(cacheKey, toCache);
                     if (fromCache != null) {
+                        // 另一个线程击败了我们，所以我们将使用缓存的值代替
                         // another thread beat us so we'll use the cached value instead
                         toCache.unsubscribe();
                         isResponseFromCache = true;
