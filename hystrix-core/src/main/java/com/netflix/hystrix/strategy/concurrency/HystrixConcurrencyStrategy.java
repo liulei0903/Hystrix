@@ -91,6 +91,12 @@ public abstract class HystrixConcurrencyStrategy {
         }
     }
 
+    /**
+     * 获取J.U.C线程池对象,三个 new ThreadPoolExecutor 都没有传入 RejectedExecutionHandler 这个拒绝策略实现,所以使用的默认AbortPolicy — 当任务添加到线程池中被拒绝时，它将抛出 RejectedExecutionException异常
+     * @param threadPoolKey
+     * @param threadPoolProperties
+     * @return
+     */
     public ThreadPoolExecutor getThreadPool(final HystrixThreadPoolKey threadPoolKey, HystrixThreadPoolProperties threadPoolProperties) {
         final ThreadFactory threadFactory = getThreadFactory(threadPoolKey);
 
@@ -98,6 +104,7 @@ public abstract class HystrixConcurrencyStrategy {
         final int dynamicCoreSize = threadPoolProperties.coreSize().get();
         final int keepAliveTime = threadPoolProperties.keepAliveTimeMinutes().get();
         final int maxQueueSize = threadPoolProperties.maxQueueSize().get();
+        //指定阻塞队列
         final BlockingQueue<Runnable> workQueue = getBlockingQueue(maxQueueSize);
 
         if (allowMaximumSizeToDivergeFromCoreSize) {
@@ -106,6 +113,7 @@ public abstract class HystrixConcurrencyStrategy {
                 logger.error("Hystrix ThreadPool configuration at startup for : " + threadPoolKey.name() + " is trying to set coreSize = " +
                         dynamicCoreSize + " and maximumSize = " + dynamicMaximumSize + ".  Maximum size will be set to " +
                         dynamicCoreSize + ", the coreSize value, since it must be equal to or greater than the coreSize value");
+                // 核心线程与最大线程数
                 return new ThreadPoolExecutor(dynamicCoreSize, dynamicCoreSize, keepAliveTime, TimeUnit.MINUTES, workQueue, threadFactory);
             } else {
                 return new ThreadPoolExecutor(dynamicCoreSize, dynamicMaximumSize, keepAliveTime, TimeUnit.MINUTES, workQueue, threadFactory);

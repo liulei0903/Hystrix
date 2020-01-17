@@ -261,11 +261,13 @@ public interface HystrixThreadPool {
          */
         @Override
         public boolean isQueueSpaceAvailable() {
+            // hystrix 在j.u.c threadpool 之外限定了一个最大队列数,对应配置参数 maxQueueSize,作用是threadpool的队列数不能动态调整,而这个参数可以
             if (queueSize <= 0) {
                 // we don't have a queue so we won't look for space but instead
                 // let the thread-pool reject or not
                 return true;
             } else {
+                // 判断 juc threadpool 队列数是否小于 设置值 , 对应配置参数 queueSizeRejectionThreshold
                 return threadPool.getQueue().size() < properties.queueSizeRejectionThreshold().get();
             }
         }
